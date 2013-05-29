@@ -1,12 +1,14 @@
 package highwaysimulate;
 
 import cars.*;
-import java.applet.Applet;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Random;
 
 import javax.swing.*;
 
@@ -15,14 +17,14 @@ public class Highway extends JPanel implements ActionListener{
 	private int num_car_entry, num_car_interchange, interPos;
 	private Car[] entryCar;
 	private Car[] interCar;
-	private int[] status;
-	private int[] tmpstatus;
-	private int nextEnteringEntryCar, nextEnteringInterCar, endEntryCar, endInterCar;
-	private Car influencedCar;
+	private int nextEnteringEntryCar, nextEnteringInterCar;
 	private int time;
+	private Random rnd;
 	private Timer timer;
 	private Info entryInfo, interInfo;
-	private int limit = 4;
+	private int limit;
+	private int safeFactor;
+	private ArrayList<Accident> accidents;
 	protected static Image background, lane;
 	protected static Image[] smallLane;
 	static{
@@ -33,23 +35,25 @@ public class Highway extends JPanel implements ActionListener{
 			smallLane[i-1] = new TransparentIcon(Constant.URL,"Images/lane" + i + ".png", Color.black).getIcon().getImage();
 		}
 	}
-	public Highway(int length, int lane, int num_car_entry, int num_car_interchange, int interPos){
+	public Highway(int length, int lane, int num_car_entry, int num_car_interchange, int interPos, int limit, int safeFactor){
 		try{
 			timer = new Timer(Constant.INTERVAL, this);
-			interInfo = new InterchangeInfo(interPos);
-			entryInfo = new EntryInfo(lane, interInfo);
-			set(length, lane, num_car_entry, num_car_interchange, interPos);
+			rnd = new Random();
+			interInfo = new InterchangeInfo(this);
+			entryInfo = new EntryInfo(this, interInfo);
+			accidents = new ArrayList<Accident>(0);
+			set(length, lane, num_car_entry, num_car_interchange, interPos, limit, safeFactor);
 		}catch(Exception e){
-			System.out.println(e);
+			 e.printStackTrace(); 
 		}
 	}
 	
 	public Highway(){
-		this(30, 4, 10, 0, 5);
+		this(100, 4, 20, 0, 50, 4, 2);
 	}
 	
-	public boolean set(int length, int lane, int num_car_entry, int num_car_interchange, int interPos){
-		if(length <= 0 || length > 240 || num_car_entry < 0 || num_car_interchange < 0 || interPos <= 1 || interPos > length)
+	public boolean set(int length, int lane, int num_car_entry, int num_car_interchange, int interPos, int limit, int safeFactor){
+		if(length <= 0 || length > 240 || lane <= 0 || lane > Constant.MAX_LANE || num_car_entry < 0 || num_car_interchange < 0 || interPos <= 1 || interPos > length || safeFactor < 2)
 			return false;
 		
 		this.length = length;
@@ -57,19 +61,66 @@ public class Highway extends JPanel implements ActionListener{
 		this.num_car_entry = num_car_entry;
 		this.num_car_interchange = num_car_interchange;
 		this.interPos = interPos;
-		((EntryInfo)entryInfo).reset(lane);
-		((InterchangeInfo)interInfo).reset(interPos);
+		this.limit = limit;
+		this.safeFactor = safeFactor;
+		accidents.clear();
+		((EntryInfo)entryInfo).reset();
+		((InterchangeInfo)interInfo).reset();
 		entryCar = new Car[num_car_entry + 1];
 		interCar = new Car[num_car_interchange + 1];
-		for(int i = 0; i < num_car_entry; i++)
-			entryCar[i] = new Sedan(0, this, entryInfo);
-		for(int i = 0; i < num_car_interchange; i++)
-			interCar[i] = new Sedan(interPos, this, interInfo);
+		for(int i = 0; i < num_car_entry; i++){
+			switch(rnd.nextInt(3)){
+				case 0:
+					entryCar[i] = new Sedan(0, this, entryInfo);
+					break;
+				case 1:
+					entryCar[i] = new Van(0, this, entryInfo);
+					break;
+				case 2:
+					entryCar[i] = new Truck(0, this, entryInfo);
+					break;
+				default:
+					entryCar[i] = new Sedan(0, this, entryInfo);
+			}
+			
+		}
+		for(int i = 0; i < num_car_interchange; i++){
+			switch(rnd.nextInt(3)){
+				case 0:
+					interCar[i] = new Sedan(interPos, this, interInfo);
+					break;
+				case 1:
+					interCar[i] = new Van(interPos, this, interInfo);
+					break;
+				case 2:
+					interCar[i] = new Truck(interPos, this, interInfo);
+					break;
+				default:
+					interCar[i] = new Sedan(interPos, this, interInfo);
+			}
+		}
 		nextEnteringEntryCar = 0;
 		nextEnteringInterCar = 0;
-		time = 1;
-		
+		time = 0;
 		repaint();
+		
+		/* initial dash */
+		dashAndCheckAccident();
+		Car tmpCar1 = ((EntryInfo)entryInfo).getEntryCar0();
+		Car tmpCar2 = ((InterchangeInfo)interInfo).getInterCar();
+		if( tmpCar1 != null && tmpCar1 != tmpCar2){
+			tmpCar1.setPrevCar(tmpCar2);
+			tmpCar2.setNextCar(tmpCar1);
+		}
+		adjustSpeedOrMove();
+		try{
+			Thread.sleep(Constant.INTERVAL);
+		}catch(Exception e){
+			System.out.println(e);
+		}
+		adjustSpeedOrMove();
+		
+		time = 2;
 		timer.start();
 		try{
 			Thread.yield();
@@ -81,20 +132,52 @@ public class Highway extends JPanel implements ActionListener{
 	
 	public void actionPerformed(ActionEvent e){
 		repaint();
+		if(time % 2 == 0){
+			/*Car ttmp = entryCar[0];
+			int id = 0;
+			while(ttmp != null){
+				System.out.print(id + " at " + ttmp.getHead() + " with speed " + ttmp.getSpeed() + ", ");
+				id++;
+				ttmp = ttmp.getNextCar();
+			}
+			Car ttmp = interCar[0];
+			int id = 0;
+			while(ttmp != null){
+				System.out.print(id + " at " + ttmp.getHead() + " with speed " + ttmp.getSpeed() + ", ");
+				id++;
+				ttmp = ttmp.getNextCar();
+			}*/
+			System.out.println();
+			dashAndCheckAccident();
+		}
+		adjustSpeedOrMove();
+		time++;
+	}
+	
+	private void dashAndCheckAccident(){
 		entryInfo.resetPower();
 		interInfo.resetPower();
 		while(nextEnteringEntryCar < num_car_entry && entryCar[nextEnteringEntryCar].dash()){
 			nextEnteringEntryCar++;
 		}
-		
+		while(nextEnteringInterCar < num_car_interchange && interCar[nextEnteringInterCar].dash()){
+			nextEnteringInterCar++;
+		}
+		for(int i = 0; i < num_car_entry; i++){
+			entryCar[i].checkAccident();
+		}
+		for(int i = 0; i < num_car_interchange; i++){
+			interCar[i].checkAccident();
+		}
+	}
+	
+	private void adjustSpeedOrMove(){
 		for(int i = 0; i < num_car_entry; i++){
 			new Thread(entryCar[i]).start();
 		}
 		for(int i = 0; i < num_car_interchange; i++){
 			new Thread(interCar[i]).start();
 		}
-		time++;
-		
 	}
 	
 	public void paint(Graphics g){
@@ -112,23 +195,30 @@ public class Highway extends JPanel implements ActionListener{
 				g.drawImage(smallLane[k], i * Constant.LANEWIDTH + k * Constant.GRIDSIZE, 100 + j*20, Constant.GRIDSIZE, Constant.LANEHEIGHT, null);
 			}
 		}
-		int count = 0;
+		
 		for(i = 0; i < num_car_entry; i++){
 			if(entryCar[i].getStatus() == Constant.Status.BEFOREINTER || entryCar[i].getStatus() == Constant.Status.AFTERINTER){
-				g.drawImage(entryCar[i].getImage(), entryCar[i].getPos()*Constant.GRIDSIZE, 110 + entryCar[i].getLane()*20, Constant.GRIDSIZE*entryCar[i].getLength(), Constant.GRIDSIZE, null);
-				count++;
+				g.drawImage(entryCar[i].getImage(), entryCar[i].getPos()*Constant.GRIDSIZE + entryCar[i].accPad1, 110 + entryCar[i].getLane()*20 + entryCar[i].accPad2, Constant.GRIDSIZE*entryCar[i].getLength(), Constant.GRIDSIZE, null);
+			}
+		}
+		for(i = 0; i < num_car_interchange; i++){
+			if(interCar[i].getStatus() == Constant.Status.BEFOREINTER || interCar[i].getStatus() == Constant.Status.AFTERINTER){
+				g.drawImage(interCar[i].getImage(), interCar[i].getPos()*Constant.GRIDSIZE + interCar[i].accPad1, 110 + interCar[i].getLane()*20 + interCar[i].accPad2, Constant.GRIDSIZE*interCar[i].getLength(), Constant.GRIDSIZE, null);
 				
 			}
 		}
-		Car tmp = entryCar[0];
-		int id = 0;
-		while(tmp != null){
-			System.out.print(id + " at " + tmp.getPos() + " with speed " + tmp.getSpeed() + ", ");
-			id++;
-			tmp = tmp.getNextCar();
+		
+		Iterator<Accident> iterator = accidents.iterator();
+		Accident tmp;
+		while(iterator.hasNext()){
+			tmp = iterator.next();
+			g.drawImage(tmp.getImage(), tmp.getPos()*Constant.GRIDSIZE + tmp.accPad1, 110 + tmp.getLane()*20 + tmp.accPad2, Constant.GRIDSIZE, Constant.GRIDSIZE, null);
 		}
-		System.out.println();
 		g.drawString(Integer.toString(time/2), 20, 20);
+	}
+	
+	public void addAccident(Accident accident){
+		accidents.add(accident);
 	}
 	public int getLimit(){
 		return limit;
@@ -138,5 +228,11 @@ public class Highway extends JPanel implements ActionListener{
 	}
 	public int getLength(){
 		return length;
+	}
+	public int getUsedLane(){
+		return usedLane;
+	}
+	public int getSafeFactor(){
+		return safeFactor;
 	}
 }

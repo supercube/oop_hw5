@@ -4,49 +4,41 @@ import cars.*;
 
 public class InterchangeInfo extends Info{
 	private Car interCar;
-	private int interPos;
+	private Highway highway;
 	private boolean power;
-	public InterchangeInfo(int interPos){
-		reset(interPos);
-		
+	public InterchangeInfo(Highway highway){
+		this.highway = highway;
+		reset();
 	}
-	public boolean dash(Car car) {
-		
-		if(power && interCar == null){
-			car.setPrevCar(new EmptyCar());
+	public synchronized boolean dash(Car car) {
+		if(power && interCar.getPos() >= (highway.getSafeFactor()+1) + highway.getInterPos() + car.getLength() - 1 && !interCar.isAccident()){
+			car.setPrevCar(interCar);
+			car.setNextCar(interCar.getNextCar());
+			if(interCar.getNextCar() != null)
+				interCar.getNextCar().setPrevCar(car);
+			interCar.setNextCar(car);
 			car.setLane(0);
 			interCar = car;
 			power = false;
 			return true;
-		}else{
-			synchronized(interCar){
-				if(power &&  interCar.getPos() >= 3 + interPos){
-					car.setPrevCar(interCar);
-					car.setNextCar(interCar.getNextCar());
-					interCar.getNextCar().setPrevCar(car);
-					interCar.setNextCar(car);
-					car.setLane(0);
-					interCar = car;
-					power = false;
-					return true;
-				}
-			}
 		}
 		return false;
 	}
 	
-	protected void reset(int interPos){
+	protected void reset(){
 		resetPower();
-		this.interPos = interPos;
-		interCar = null;
+		interCar = new EmptyCar();
 	}
 	
 	protected void resetPower(){
 		power = true;
 	}
 	
+	protected Car getInterCar(){
+		return interCar;
+	}
+	
 	public void setInterCar(Car car){
-		interCar.setNextCar(car);
 		interCar = car;
 	}
 }
