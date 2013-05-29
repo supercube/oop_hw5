@@ -14,7 +14,7 @@ public class HighwayApplet extends JApplet{
 		try{
 			super.init();
 			c = getContentPane();
-			showPanel = new Highway(this);
+			showPanel = new Highway();
 			showPanel.setBounds(0, 0, 1200, 400);
 			infoPanel = new InfoPanel((Highway)showPanel);
 			infoPanel.setBounds(0, 400, 1200, 100);
