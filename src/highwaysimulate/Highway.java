@@ -22,6 +22,7 @@ public class Highway extends JPanel implements ActionListener{
 	private int time;
 	private Timer timer;
 	private Info entryInfo, interInfo;
+	private int limit = 4;
 	protected static Image background, lane;
 	protected static Image[] smallLane;
 	static{
@@ -35,8 +36,8 @@ public class Highway extends JPanel implements ActionListener{
 	public Highway(int length, int lane, int num_car_entry, int num_car_interchange, int interPos){
 		try{
 			timer = new Timer(Constant.INTERVAL, this);
-			entryInfo = new EntryInfo(lane);
 			interInfo = new InterchangeInfo(interPos);
+			entryInfo = new EntryInfo(lane, interInfo);
 			set(length, lane, num_car_entry, num_car_interchange, interPos);
 		}catch(Exception e){
 			System.out.println(e);
@@ -44,7 +45,7 @@ public class Highway extends JPanel implements ActionListener{
 	}
 	
 	public Highway(){
-		this(10, 1, 5, 0, 5);
+		this(30, 4, 10, 0, 5);
 	}
 	
 	public boolean set(int length, int lane, int num_car_entry, int num_car_interchange, int interPos){
@@ -61,11 +62,12 @@ public class Highway extends JPanel implements ActionListener{
 		entryCar = new Car[num_car_entry + 1];
 		interCar = new Car[num_car_interchange + 1];
 		for(int i = 0; i < num_car_entry; i++)
-			entryCar[i] = new Sedan(0, 4, entryInfo);
+			entryCar[i] = new Sedan(0, this, entryInfo);
 		for(int i = 0; i < num_car_interchange; i++)
-			interCar[i] = new Sedan(interPos, 4, interInfo);
-		
-		time = 0;
+			interCar[i] = new Sedan(interPos, this, interInfo);
+		nextEnteringEntryCar = 0;
+		nextEnteringInterCar = 0;
+		time = 1;
 		
 		repaint();
 		timer.start();
@@ -81,6 +83,10 @@ public class Highway extends JPanel implements ActionListener{
 		repaint();
 		entryInfo.resetPower();
 		interInfo.resetPower();
+		while(nextEnteringEntryCar < num_car_entry && entryCar[nextEnteringEntryCar].dash()){
+			nextEnteringEntryCar++;
+		}
+		
 		for(int i = 0; i < num_car_entry; i++){
 			new Thread(entryCar[i]).start();
 		}
@@ -109,13 +115,28 @@ public class Highway extends JPanel implements ActionListener{
 		int count = 0;
 		for(i = 0; i < num_car_entry; i++){
 			if(entryCar[i].getStatus() == Constant.Status.BEFOREINTER || entryCar[i].getStatus() == Constant.Status.AFTERINTER){
-				g.drawImage(entryCar[i].getImage(), entryCar[i].getPos()*Constant.GRIDSIZE, 110 + entryCar[i].getLane()*20, Constant.GRIDSIZE, Constant.GRIDSIZE, null);
+				g.drawImage(entryCar[i].getImage(), entryCar[i].getPos()*Constant.GRIDSIZE, 110 + entryCar[i].getLane()*20, Constant.GRIDSIZE*entryCar[i].getLength(), Constant.GRIDSIZE, null);
 				count++;
-				System.out.print(entryCar[i].getLane() + " at " + entryCar[i].getPos() + ", ");
+				
 			}
 		}
-		System.out.println(": " + count + ", " + ((EntryInfo)entryInfo).tt);
-		g.drawString(Integer.toString(time), 20, 20);
-		
+		Car tmp = entryCar[0];
+		int id = 0;
+		while(tmp != null){
+			System.out.print(id + " at " + tmp.getPos() + " with speed " + tmp.getSpeed() + ", ");
+			id++;
+			tmp = tmp.getNextCar();
+		}
+		System.out.println();
+		g.drawString(Integer.toString(time/2), 20, 20);
+	}
+	public int getLimit(){
+		return limit;
+	}
+	public int getInterPos(){
+		return interPos;
+	}
+	public int getLength(){
+		return length;
 	}
 }

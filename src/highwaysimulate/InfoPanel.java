@@ -22,9 +22,9 @@ public class InfoPanel extends JPanel{
 		for(int i = 0; i < Constant.NO_PARAMETER; i++)
 			infoLabel[i] = new JLabel(info[i]);
 		
-		infoField[0] = new JTextField("10");
-		infoField[1] = new JTextField("1");
-		infoField[2] = new JTextField("5");
+		infoField[0] = new JTextField("30");
+		infoField[1] = new JTextField("4");
+		infoField[2] = new JTextField("10");
 		infoField[3] = new JTextField("0");
 		infoField[4] = new JTextField("5");
 		

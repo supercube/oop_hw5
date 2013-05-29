@@ -7,37 +7,40 @@ public class EntryInfo extends Info{
 	private Car[] entryCar;
 	private boolean[] power;
 	private int usedLane;
+	private Info interInfo;
 	public int tt;
-	public EntryInfo(int usedLane){
+	public EntryInfo(int usedLane, Info info){
 		power = new boolean[Constant.MAX_LANE];
+		interInfo = info;
 		reset(usedLane);
 	}
-	public EntryInfo(){
-		this(Constant.MAX_LANE);
+	public EntryInfo(Info info){
+		this(Constant.MAX_LANE, info);
 	}
 	
-	public Car dash(Car car){
+	public boolean dash(Car car){
 		tt++;
 		for(int i = 0; i < usedLane; i++){
 			if(power[i] && entryCar[i] == null){
+				car.setPrevCar(new EmptyCar());
 				car.setLane(i);
 				entryCar[i] = car;
 				power[i] = false;
-				return new EmptyCar();
+				return true;
 			}else{
 				synchronized(entryCar[i]){
 					if(power[i] && entryCar[i].getPos() >= 3){
+						car.setPrevCar(entryCar[i]);
 						entryCar[i].setNextCar(car);
 						car.setLane(i);
-						Car tmp = entryCar[i];
 						entryCar[i] = car;
 						power[i] = false;
-						return tmp;
+						return true;
 					}
 				}
 			}
 		}
-		return null;
+		return false;
 	}
 	
 	protected void reset(int usedLane){
@@ -53,5 +56,9 @@ public class EntryInfo extends Info{
 		for(int i = 0; i < usedLane; i++)
 			power[i] = true;
 		tt = 0;
+	}
+	
+	public InterchangeInfo getInterInfo(){
+		return (InterchangeInfo)interInfo;
 	}
 }

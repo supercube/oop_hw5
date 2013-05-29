@@ -1,7 +1,6 @@
 package highwaysimulate;
 
-import cars.Car;
-import cars.EmptyCar;
+import cars.*;
 
 public class InterchangeInfo extends Info{
 	private Car interCar;
@@ -11,26 +10,29 @@ public class InterchangeInfo extends Info{
 		reset(interPos);
 		
 	}
-	public Car dash(Car car) {
+	public boolean dash(Car car) {
 		
 		if(power && interCar == null){
+			car.setPrevCar(new EmptyCar());
 			car.setLane(0);
 			interCar = car;
 			power = false;
-			return new EmptyCar();
+			return true;
 		}else{
 			synchronized(interCar){
 				if(power &&  interCar.getPos() >= 3 + interPos){
+					car.setPrevCar(interCar);
+					car.setNextCar(interCar.getNextCar());
+					interCar.getNextCar().setPrevCar(car);
 					interCar.setNextCar(car);
 					car.setLane(0);
-					Car tmp = interCar;
 					interCar = car;
 					power = false;
-					return tmp;
+					return true;
 				}
 			}
 		}
-		return null;
+		return false;
 	}
 	
 	protected void reset(int interPos){
@@ -42,5 +44,9 @@ public class InterchangeInfo extends Info{
 	protected void resetPower(){
 		power = true;
 	}
-
+	
+	public void setInterCar(Car car){
+		interCar.setNextCar(car);
+		interCar = car;
+	}
 }
