@@ -24,15 +24,16 @@ public class Highway extends JPanel implements ActionListener{
 	private Info entryInfo, interInfo;
 	private int limit;
 	private int safeFactor;
+	private int interImageId;
 	private ArrayList<Accident> accidents;
 	protected static Image background, lane;
-	protected static Image[] smallLane;
+	protected static Image[] interArrow;
 	static{
 		background = new TransparentIcon(Constant.URL,"Images/highway.png", Color.black).getIcon().getImage();
 		lane = new TransparentIcon(Constant.URL,"Images/lane.png", Color.black).getIcon().getImage();
-		smallLane = new Image[Constant.LANEWIDTH/Constant.GRIDSIZE-1];
-		for(int i = 1; i <= Constant.LANEWIDTH/Constant.GRIDSIZE-1; i++){
-			smallLane[i-1] = new TransparentIcon(Constant.URL,"Images/lane" + i + ".png", Color.black).getIcon().getImage();
+		interArrow = new Image[3];
+		for(int i = 0; i < 3; i++){
+			interArrow[i] = new TransparentIcon(Constant.URL,"Images/interArrow" + i + ".png", Color.white).getIcon().getImage();
 		}
 	}
 	public Highway(int length, int lane, int num_car_entry, int num_car_interchange, int interPos, int limit, int safeFactor){
@@ -63,6 +64,7 @@ public class Highway extends JPanel implements ActionListener{
 		this.interPos = interPos;
 		this.limit = limit;
 		this.safeFactor = safeFactor;
+		interImageId = -1;
 		accidents.clear();
 		((EntryInfo)entryInfo).reset();
 		((InterchangeInfo)interInfo).reset();
@@ -133,21 +135,6 @@ public class Highway extends JPanel implements ActionListener{
 	public void actionPerformed(ActionEvent e){
 		repaint();
 		if(time % 2 == 0){
-			/*Car ttmp = entryCar[0];
-			int id = 0;
-			while(ttmp != null){
-				System.out.print(id + " at " + ttmp.getHead() + " with speed " + ttmp.getSpeed() + ", ");
-				id++;
-				ttmp = ttmp.getNextCar();
-			}
-			Car ttmp = interCar[0];
-			int id = 0;
-			while(ttmp != null){
-				System.out.print(id + " at " + ttmp.getHead() + " with speed " + ttmp.getSpeed() + ", ");
-				id++;
-				ttmp = ttmp.getNextCar();
-			}*/
-			System.out.println();
 			dashAndCheckAccident();
 		}
 		adjustSpeedOrMove();
@@ -180,9 +167,17 @@ public class Highway extends JPanel implements ActionListener{
 		}
 	}
 	
+	private Image getInterImage(){
+		interImageId = (interImageId+1)%3;
+		return interArrow[interImageId];
+	}
+	
 	public void paint(Graphics g){
 		super.paint(g);
-		g.drawImage(background, 0, 0, 1200, 500, null);
+		g.drawImage(background, 0, 100, length*Constant.GRIDSIZE, Constant.LANEHEIGHT + 2*usedLane*Constant.LANEHEIGHT, null);
+		
+		g.drawImage(getInterImage(), interPos*Constant.GRIDSIZE, 100, 10, 10, null);
+		
 		int i;
 		int rate = Constant.LANEWIDTH/Constant.GRIDSIZE;
 		for(i = 0; i < length/rate; i++){
@@ -190,10 +185,10 @@ public class Highway extends JPanel implements ActionListener{
 				g.drawImage(lane, i * Constant.LANEWIDTH, 100 + j*20, Constant.LANEWIDTH, Constant.LANEHEIGHT, null);
 			}
 		}
-		for(int k = 0; k < length - i*rate; k++){
-			for(int j = 0; j < usedLane + 1; j++){
-				g.drawImage(smallLane[k], i * Constant.LANEWIDTH + k * Constant.GRIDSIZE, 100 + j*20, Constant.GRIDSIZE, Constant.LANEHEIGHT, null);
-			}
+		
+		for(int j = 0; j < usedLane + 1; j++){
+			g.drawImage(lane, i * Constant.LANEWIDTH, 100 + j*20, i * Constant.LANEWIDTH + (length-i*rate)*Constant.GRIDSIZE, 110 + j*20, 0, 0, (length-i*rate)*Constant.GRIDSIZE, 10, null);
+							//   dx1					dy1				dx2														dy2		 sx1 sy1   sx2							   sy2
 		}
 		
 		for(i = 0; i < num_car_entry; i++){
@@ -214,7 +209,7 @@ public class Highway extends JPanel implements ActionListener{
 			tmp = iterator.next();
 			g.drawImage(tmp.getImage(), tmp.getPos()*Constant.GRIDSIZE + tmp.accPad1, 110 + tmp.getLane()*20 + tmp.accPad2, Constant.GRIDSIZE, Constant.GRIDSIZE, null);
 		}
-		g.drawString(Integer.toString(time/2), 20, 20);
+		g.drawString("time: " + Integer.toString(time/2), 20, 20);
 	}
 	
 	public void addAccident(Accident accident){

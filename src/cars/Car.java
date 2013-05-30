@@ -132,11 +132,12 @@ public abstract class Car implements Runnable{
 	public synchronized void adjustSpeed(){
 		
 		if(acc_count == 0 && slow_count == 0){
+			int distance = prevCar.getPos()-getHead();
 			if(prevCar != null && prevCar.isAccident()){
 				slow_count = 1;
-			}else if((prevCar instanceof EmptyCar || prevCar.getPos()-getHead() > highway.getSafeFactor()*speed) && speed < highway.getLimit() && prevCar.getPos()-getHead() > 1){
+			}else if((prevCar instanceof EmptyCar || distance > highway.getSafeFactor()*speed) && speed < highway.getLimit() && distance > 1){
 				acc_count = 2;
-			}else if((prevCar != null && prevCar.getPos()-getHead() < highway.getSafeFactor()*speed) && speed > 0){
+			}else if((prevCar != null && distance < highway.getSafeFactor()*speed) && speed > 0 && !(speed == 1 && distance > 2)){
 				slow_count = 1;
 			}
 		}

@@ -50,7 +50,7 @@ public class InfoPanel extends JPanel{
 			this.add(infoLabel[i]);
 			this.add(infoField[i]);
 		}
-		Warning = new JLabel("Length > 0,    Length <= 240,    1 <= #(Lane) <= 8,    #(Car At Entry) >= 0,    #(CarAtInterchange) >= 0,    1 < Position(Interchage) <= Length,    Safe Factor >= 2 (5 is good)");
+		Warning = new JLabel("Length > 0,    Length <= 240,    1 <= #(Lane) <= 8,    #(Car At Entry) >= 0,    #(CarAtInterchange) >= 0,    1 < Position(Interchage) <= Length,    Safe Factor >= 2");
 		Warning.setBounds(20, 50, 930, 50);
 		this.add(Warning);
 		submitButton = new SubmitButton("Confirm");
