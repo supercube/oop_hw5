@@ -21,7 +21,8 @@ public class Highway extends JPanel implements ActionListener{
 	private int time;
 	private Random rnd;
 	private Timer timer;
-	private Info entryInfo, interInfo;
+	private EntryInfo entryInfo;
+	private InterchangeInfo interInfo;
 	private int limit;
 	private int safeFactor;
 	private int interImageId;
@@ -66,8 +67,8 @@ public class Highway extends JPanel implements ActionListener{
 		this.safeFactor = safeFactor;
 		interImageId = -1;
 		accidents.clear();
-		((EntryInfo)entryInfo).reset();
-		((InterchangeInfo)interInfo).reset();
+		entryInfo.reset();
+		interInfo.reset();
 		entryCar = new Car[num_car_entry + 1];
 		interCar = new Car[num_car_interchange + 1];
 		for(int i = 0; i < num_car_entry; i++){
@@ -108,8 +109,8 @@ public class Highway extends JPanel implements ActionListener{
 		
 		/* initial dash */
 		dashAndCheckAccident();
-		Car tmpCar1 = ((EntryInfo)entryInfo).getEntryCar0();
-		Car tmpCar2 = ((InterchangeInfo)interInfo).getInterCar();
+		Car tmpCar1 = entryInfo.getEntryCar0();
+		Car tmpCar2 = interInfo.getInterCar();
 		if( tmpCar1 != null && tmpCar1 != tmpCar2){
 			tmpCar1.setPrevCar(tmpCar2);
 			tmpCar2.setNextCar(tmpCar1);
